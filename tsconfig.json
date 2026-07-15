@@ -1,0 +1,32 @@
+{
+  "include": [
+    "src",
+    "test",
+    "*.config.ts"
+  ],
+  "exclude": [
+    "test/fixtures"
+  ],
+  "compilerOptions": {
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+
+    "declaration": true,
+    "noEmit": true,
+
+    "erasableSyntaxOnly": true,
+    "isolatedDeclarations": true,
+    "verbatimModuleSyntax": true,
+
+    "target": "esnext",
+    "types": [
+      "node"
+    ],
+
+    "skipLibCheck": true,
+
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true
+  }
+}
