@@ -1,7 +1,7 @@
 import type { Linter } from 'eslint';
 
 import { execFile as execFileCallback } from 'node:child_process';
-import { rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -21,6 +21,7 @@ import {
 const FIXTURES_DIR = join(process.cwd(), 'test/fixtures');
 
 const COMMON_FIXTURES = ['a.ts', 'b.tsx', 'a.jsx', 'a.json', 'a.yaml', 'a.md', 'package.json'];
+const NODE_SCOPE_DIR = join(FIXTURES_DIR, 'node-scope');
 
 describe('preset options', () => {
   it('exports the documented option sets', () => {
@@ -213,5 +214,53 @@ describe('scoping: calculated configs match file types', () => {
         expect(namespaces, `${file} should not carry ${namespace}`).not.toContain(namespace);
       }
     }
+  });
+});
+
+describe('scoping: node rules honour ignores', () => {
+  beforeAll(async () => {
+    await mkdir(join(NODE_SCOPE_DIR, 'client'), { recursive: true });
+    await mkdir(join(NODE_SCOPE_DIR, 'server'), { recursive: true });
+    await writeFile(join(NODE_SCOPE_DIR, 'client', 'a.js'), 'const fs = require(\'fs\');\n');
+    await writeFile(join(NODE_SCOPE_DIR, 'server', 'a.js'), 'const fs = require(\'fs\');\n');
+  });
+
+  afterAll(async () => {
+    await rm(NODE_SCOPE_DIR, { recursive: true, force: true });
+  });
+
+  it('keeps client files free of node rules while server files keep them', async () => {
+    const eslint = new ESLint({
+      cwd: NODE_SCOPE_DIR,
+      overrideConfig: await defineConfig({ node: { ignores: ['**/client/**'] } }),
+      overrideConfigFile: true,
+    });
+
+    const results = await eslint.lintFiles(['client/a.js', 'server/a.js']);
+    const client = results[0]!;
+    const server = results[1]!;
+
+    expect(client.messages.filter((message) => message.ruleId?.startsWith('n/')))
+      .toHaveLength(0);
+    expect(server.messages.some((message) => message.ruleId === 'n/prefer-node-protocol'))
+      .toBe(true);
+  });
+
+  it('calculateConfigForFile honours ignores for virtual paths', async () => {
+    const eslint = new ESLint({
+      cwd: process.cwd(),
+      overrideConfig: await defineConfig({ node: { ignores: ['plugins/*/src/client/**'] } }),
+      overrideConfigFile: true,
+    });
+
+    const client = (await eslint.calculateConfigForFile('plugins/foo/src/client/a.js')) as Linter.Config;
+    const server = (await eslint.calculateConfigForFile('plugins/foo/src/server/a.js')) as Linter.Config;
+
+    expect(Object.keys(client.rules ?? {})
+      .filter((rule) => rule.startsWith('n/')))
+      .toHaveLength(0);
+    expect(Object.keys(server.rules ?? {})
+      .some((rule) => rule.startsWith('n/')))
+      .toBe(true);
   });
 });

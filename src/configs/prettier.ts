@@ -5,38 +5,58 @@ import formatPlugin from 'eslint-plugin-format';
 
 import type { PrettierOptions } from '../types.ts';
 
-interface FormatTarget {
+type FormatterKind = keyof PrettierOptions;
+
+interface TargetOptions {
   files: string[];
   parser: string;
   extraPrettierOptions?: Omit<Partial<Options>, 'parser'>;
 }
 
-const htmlTargets: FormatTarget[] = [{ files: ['**/*.html'], parser: 'html' }];
-
-const cssTargets: FormatTarget[] = [
-  { files: ['**/*.css'], parser: 'css' },
-  { files: ['**/*.scss'], parser: 'scss' },
-  { files: ['**/*.less'], parser: 'less' },
-];
-
-const markdownTargets: FormatTarget[] = [
-  {
-    files: ['**/*.md'],
-    parser: 'markdown',
-    extraPrettierOptions: {
-      embeddedLanguageFormatting: 'off',
+const targets: Record<FormatterKind, TargetOptions[]> = {
+  html: [{ files: ['**/*.html'], parser: 'html' }],
+  css: [{ files: ['**/*.css'], parser: 'css' }],
+  scss: [{ files: ['**/*.scss'], parser: 'scss' }],
+  less: [{ files: ['**/*.less'], parser: 'less' }],
+  markdown: [
+    {
+      files: ['**/*.md'],
+      parser: 'markdown',
+      extraPrettierOptions: {
+        embeddedLanguageFormatting: 'off',
+      },
     },
-  },
-];
+  ],
+};
 
-export function prettier(options: PrettierOptions = {}): Linter.Config[] {
-  const targets = [
-    ...(options.html ? htmlTargets : []),
-    ...(options.css ? cssTargets : []),
-    ...(options.markdown ? markdownTargets : []),
-  ];
+export const formatterKinds = Object.keys(targets) as readonly FormatterKind[];
 
-  if (targets.length === 0) {
+function targetBlock({ files, parser, extraPrettierOptions }: TargetOptions): Linter.Config {
+  return {
+    files,
+    languageOptions: {
+      parser: formatPlugin.parserPlain,
+    },
+    rules: {
+      'format/prettier': [
+        'error',
+        {
+          singleQuote: true,
+          printWidth: 120,
+          parser,
+          ...extraPrettierOptions,
+        } satisfies Partial<Options>,
+      ],
+    },
+  };
+}
+
+export function formatter(kind: FormatterKind): Linter.Config[] {
+  return targets[kind].map(targetBlock);
+}
+
+export function prettier(targetBlocks: Linter.Config[]): Linter.Config[] {
+  if (targetBlocks.length === 0) {
     return [];
   }
 
@@ -46,22 +66,6 @@ export function prettier(options: PrettierOptions = {}): Linter.Config[] {
         format: formatPlugin,
       },
     },
-    ...targets.map(({ files, parser, extraPrettierOptions }): Linter.Config => ({
-      files,
-      languageOptions: {
-        parser: formatPlugin.parserPlain,
-      },
-      rules: {
-        'format/prettier': [
-          'error',
-          {
-            singleQuote: true,
-            printWidth: 120,
-            parser,
-            ...extraPrettierOptions,
-          } satisfies Partial<Options>,
-        ],
-      },
-    })),
+    ...targetBlocks,
   ];
 }

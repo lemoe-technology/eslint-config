@@ -4,23 +4,8 @@ import { scopePreset } from './utils/scopePreset.ts';
 
 export async function jsonc(): Promise<Linter.Config[]> {
   const { default: pluginJsonc } = await import('eslint-plugin-jsonc');
-  const { default: pluginPackageJson } = await import('eslint-plugin-package-json');
 
   return [
-    ...scopePreset([pluginPackageJson.configs.recommended], {
-      languageFiles: ['**/package.json'],
-    }),
-    ...scopePreset([pluginPackageJson.configs.stylistic], {
-      languageFiles: ['**/package.json'],
-    }),
-    {
-      files: ['**/package.json'],
-      rules: {
-        'package-json/require-description': ['error', { ignorePrivate: true }],
-        'package-json/require-sideEffects': 'off',
-      },
-    },
-
     ...scopePreset(pluginJsonc.configs['recommended-with-json'], {
       languageFiles: ['**/*.json', '**/*.jsonc'],
     }),

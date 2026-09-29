@@ -89,8 +89,50 @@ describe(defineConfig, () => {
 
     expect(names).not.toContain('@typescript-eslint');
     expect(names).not.toContain('jsonc');
-    expect(names).not.toContain('package-json');
     expect(names).not.toContain('yml');
+  });
+
+  it('keeps package-json rules when jsonc is disabled', async () => {
+    const names = pluginNames(await defineConfig({ jsonc: false }));
+
+    expect(names)
+      .toContain('package-json');
+  });
+
+  it('scopes js rule blocks', async () => {
+    const configs = await defineConfig({ js: { ignores: ['**/scripts/**'] } });
+
+    const ruleBlocks = configs.filter((config) => config.rules !== undefined && 'eqeqeq' in config.rules);
+    expect(ruleBlocks.length)
+      .toBeGreaterThan(0);
+    for (const block of ruleBlocks) {
+      expect(block.ignores)
+        .toStrictEqual(['**/scripts/**']);
+    }
+  });
+
+  it('keeps regexp plugin registration global while scoping rules', async () => {
+    const configs = await defineConfig({ regexp: { ignores: ['**/fixtures/**'] } });
+
+    const pluginBlocks = configs.filter((config) => config.plugins !== undefined && 'regexp' in config.plugins);
+    expect(pluginBlocks)
+      .toHaveLength(1);
+    expect(pluginBlocks[0]?.ignores)
+      .toBeUndefined();
+
+    const ruleBlock = configs.find((config) => config.rules !== undefined && 'regexp/require-unicode-regexp' in config.rules);
+    expect(ruleBlock?.ignores)
+      .toStrictEqual(['**/fixtures/**']);
+  });
+
+  it('merges packageJson rules', async () => {
+    const configs = await defineConfig({
+      packageJson: { rules: { 'package-json/require-sideEffects': 'error' } },
+    });
+
+    const ruleBlock = configs.find((config) => config.rules !== undefined && 'package-json/require-sideEffects' in config.rules);
+    expect(ruleBlock?.rules?.['package-json/require-sideEffects'])
+      .toBe('error');
   });
 
   it('enables all formatters with prettier: true', async () => {
@@ -118,10 +160,106 @@ describe(defineConfig, () => {
     expect(files).not.toContain('**/*.css');
   });
 
+  it('applies rule-block options per formatter', async () => {
+    const configs = await defineConfig({
+      prettier: {
+        markdown: { files: ['docs/**/*.md'] },
+        html: {},
+      },
+    });
+
+    const targetFiles = configs
+      .filter((config) => config.rules !== undefined && 'format/prettier' in config.rules)
+      .map((config) => config.files);
+
+    expect(targetFiles)
+      .toContainEqual(['docs/**/*.md']);
+    expect(targetFiles)
+      .toContainEqual(['**/*.html']);
+    expect(targetFiles)
+      .not.toContainEqual(['**/*.md']);
+    expect(targetFiles)
+      .not.toContainEqual(['**/*.css']);
+  });
+
+  it('replaces scss formatter files', async () => {
+    const configs = await defineConfig({ prettier: { scss: { files: ['packages/ui/**/*.scss'] } } });
+
+    const targetFiles = configs
+      .filter((config) => config.rules !== undefined && 'format/prettier' in config.rules)
+      .map((config) => config.files);
+
+    expect(targetFiles)
+      .toContainEqual(['packages/ui/**/*.scss']);
+    expect(targetFiles)
+      .not.toContainEqual(['**/*.scss']);
+    expect(targetFiles)
+      .not.toContainEqual(['**/*.css']);
+  });
+
   it('can disable prettier entirely', async () => {
     const names = pluginNames(await defineConfig({ prettier: false }));
 
     expect(names).not.toContain('format');
+  });
+
+  it('keeps node plugin registration global while scoping node rules', async () => {
+    const configs = await defineConfig({ node: { ignores: ['**/client/**'] } });
+
+    const pluginBlocks = configs.filter((config) => config.plugins !== undefined && 'n' in config.plugins);
+    expect(pluginBlocks)
+      .toHaveLength(1);
+    expect(pluginBlocks[0]?.ignores)
+      .toBeUndefined();
+
+    const ruleBlock = configs.find((config) => config.rules !== undefined && 'n/prefer-node-protocol' in config.rules);
+    expect(ruleBlock?.ignores)
+      .toStrictEqual(['**/client/**']);
+  });
+
+  it('scopes typescript rule blocks but not the language block', async () => {
+    const configs = await defineConfig({
+      typescript: { tsconfigRootDir: '/project', ignores: ['**/fixtures/**'] },
+    });
+
+    const ruleBlocks = configs.filter(
+      (config) => config.rules !== undefined && Object.keys(config.rules)
+        .some((rule) => rule.startsWith('@typescript-eslint/')),
+    );
+    expect(ruleBlocks.length)
+      .toBeGreaterThan(1);
+    for (const block of ruleBlocks) {
+      expect(block.ignores)
+        .toStrictEqual(['**/fixtures/**']);
+    }
+
+    const languageBlock = configs.find(
+      (config) => config.languageOptions?.parserOptions !== undefined
+        && 'projectService' in (config.languageOptions.parserOptions as object),
+    );
+    expect(languageBlock?.ignores)
+      .toBeUndefined();
+    expect(languageBlock?.languageOptions?.parserOptions)
+      .toMatchObject({ tsconfigRootDir: '/project' });
+  });
+
+  it('scopes vue rules while the processor block keeps its files', async () => {
+    const configs = await defineConfig({ vue: { ignores: ['**/legacy/**'] } });
+
+    const vueRuleBlocks = configs.filter(
+      (config) => config.rules !== undefined && Object.keys(config.rules)
+        .some((rule) => rule.startsWith('vue/')),
+    );
+    expect(vueRuleBlocks.length)
+      .toBeGreaterThan(0);
+    for (const block of vueRuleBlocks) {
+      expect(block.ignores)
+        .toStrictEqual(['**/legacy/**']);
+    }
+
+    const processorBlock = configs.find((config) => config.processor !== undefined);
+    expect(processorBlock?.files)
+      .toStrictEqual(['**/*.vue']);
   });
 
   it('appends user configs at the end', async () => {

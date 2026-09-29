@@ -8,6 +8,8 @@ export async function node(): Promise<Linter.Config[]> {
       plugins: {
         n: nodePlugin,
       },
+    },
+    {
       rules: {
         'n/no-deprecated-api': 'error',
         'n/process-exit-as-throw': 'error',

@@ -1,4 +1,32 @@
-export interface TypeScriptOptions {
+import type { Linter } from 'eslint';
+
+export interface RuleBlockOptions {
+  /**
+   * Replaces the file globs of the rule blocks.
+   */
+  files?: string[];
+
+  /**
+   * Replaces the ignores of the rule blocks.
+   */
+  ignores?: string[];
+
+  /**
+   * @example
+   * ```ts
+   * js: {
+   *   rules: {
+   *     'no-console': 'off',
+   *   },
+   * }
+   * ```
+   */
+  rules?: Linter.RulesRecord;
+}
+
+export type IntegrationOptions<T extends RuleBlockOptions = RuleBlockOptions> = boolean | T;
+
+export interface TypeScriptOptions extends RuleBlockOptions {
   /**
    * Absolute path to the project root, passed through to typescript-eslint's parserOptions.
    *
@@ -7,7 +35,7 @@ export interface TypeScriptOptions {
   tsconfigRootDir?: string;
 }
 
-export interface TailwindOptions {
+export interface TailwindOptions extends RuleBlockOptions {
   /**
    * Path to the Tailwind v4 CSS entry.
    *
@@ -16,65 +44,105 @@ export interface TailwindOptions {
   cssConfigPath?: string;
 }
 
-export interface VueOptions {
+export interface VueOptions extends RuleBlockOptions {
   /**
    * @defaultValue `true`
    */
-  tailwind?: boolean | TailwindOptions;
+  tailwind?: IntegrationOptions<TailwindOptions>;
 }
 
 export interface PrettierOptions {
   /**
    * @defaultValue `true`
    */
-  markdown?: boolean;
+  markdown?: IntegrationOptions;
 
   /**
    * @defaultValue `false`
    */
-  html?: boolean;
+  html?: IntegrationOptions;
 
   /**
    * @defaultValue `false`
    */
-  css?: boolean;
+  css?: IntegrationOptions;
+
+  /**
+   * @defaultValue `false`
+   */
+  scss?: IntegrationOptions;
+
+  /**
+   * @defaultValue `false`
+   */
+  less?: IntegrationOptions;
 }
 
 export interface UserOptions {
   /**
    * @defaultValue `true`
    */
-  typescript?: boolean | TypeScriptOptions;
-
-  /**
-   * @defaultValue `false`
-   */
-  node?: boolean;
-
-  /**
-   * @defaultValue `false`
-   */
-  vue?: boolean | VueOptions;
+  js?: RuleBlockOptions;
 
   /**
    * @defaultValue `true`
    */
-  jsonc?: boolean;
+  comments?: RuleBlockOptions;
 
   /**
    * @defaultValue `true`
    */
-  yaml?: boolean;
+  regexp?: RuleBlockOptions;
+
+  /**
+   * @defaultValue `true`
+   */
+  stylistic?: RuleBlockOptions;
+
+  /**
+   * @defaultValue `true`
+   */
+  imports?: RuleBlockOptions;
+
+  /**
+   * @defaultValue `true`
+   */
+  packageJson?: RuleBlockOptions;
+
+  /**
+   * @defaultValue `true`
+   */
+  typescript?: IntegrationOptions<TypeScriptOptions>;
 
   /**
    * @defaultValue `false`
    */
-  toml?: boolean;
+  node?: IntegrationOptions;
 
   /**
    * @defaultValue `false`
    */
-  test?: boolean;
+  vue?: IntegrationOptions<VueOptions>;
+
+  /**
+   * @defaultValue `true`
+   */
+  jsonc?: IntegrationOptions;
+
+  /**
+   * @defaultValue `true`
+   */
+  yaml?: IntegrationOptions;
+
+  /**
+   * @defaultValue `false`
+   */
+  toml?: IntegrationOptions;
+
+  /**
+   * @defaultValue `false`
+   */
+  test?: IntegrationOptions;
 
   /**
    * When set to `true`, it will enable all formatters.

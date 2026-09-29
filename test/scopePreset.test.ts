@@ -75,6 +75,35 @@ describe(scopePreset, () => {
       .toStrictEqual({ files: ['**/*.ts'], ignores: ['**/dist/**'] });
   });
 
+  it('splits plugins and rules without files when no scope is given', () => {
+    const [pluginsPart, rulesPart] = scopePreset([
+      {
+        plugins: { demo: plugin },
+        rules: { 'demo/rule': 'error' },
+      },
+    ]);
+
+    expect(pluginsPart)
+      .toStrictEqual({ plugins: { demo: plugin } });
+    expect(rulesPart)
+      .toStrictEqual({ rules: { 'demo/rule': 'error' } });
+  });
+
+  it('keeps the preset block own files in pure-split mode', () => {
+    const [pluginsPart, rulesPart] = scopePreset([
+      {
+        plugins: { demo: plugin },
+        files: ['**/*.ts'],
+        rules: { 'demo/rule': 'error' },
+      },
+    ]);
+
+    expect(pluginsPart)
+      .toStrictEqual({ plugins: { demo: plugin } });
+    expect(rulesPart)
+      .toStrictEqual({ files: ['**/*.ts'], rules: { 'demo/rule': 'error' } });
+  });
+
   it('falls back to languageFiles when ruleFiles is omitted', () => {
     const [part] = scopePreset([{ rules: { 'demo/rule': 'error' } }], { languageFiles: ['**/*.ts'] });
 

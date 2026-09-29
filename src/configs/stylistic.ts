@@ -2,14 +2,18 @@ import type { Linter } from 'eslint';
 
 import stylisticPlugin from '@stylistic/eslint-plugin';
 
+import { scopePreset } from './utils/scopePreset.ts';
+
 export function stylistic(): Linter.Config[] {
   return [
-    stylisticPlugin.configs.customize({
-      semi: true,
-      jsx: true,
-      arrowParens: true,
-      quoteProps: 'as-needed',
-    }),
+    ...scopePreset([
+      stylisticPlugin.configs.customize({
+        semi: true,
+        jsx: true,
+        arrowParens: true,
+        quoteProps: 'as-needed',
+      }),
+    ]),
     {
       rules: {
         '@stylistic/no-multiple-empty-lines': ['error', { max: 1 }],

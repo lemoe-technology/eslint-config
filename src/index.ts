@@ -1,5 +1,7 @@
 export type {
+  IntegrationOptions,
   PrettierOptions,
+  RuleBlockOptions,
   TailwindOptions,
   TypeScriptOptions,
   UserOptions,

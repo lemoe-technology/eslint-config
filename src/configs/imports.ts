@@ -12,6 +12,8 @@ export function imports(): Linter.Config[] {
         'unused-imports': unusedImportsPlugin,
         perfectionist: perfectionistPlugin,
       },
+    },
+    {
       rules: {
         'import/consistent-type-specifier-style': 'error',
         'import/first': 'error',
